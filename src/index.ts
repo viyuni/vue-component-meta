@@ -69,6 +69,17 @@ export interface ResolvedExposed {
   declarations: Declaration[];
 }
 
+export interface ResolvedComponentMeta {
+  file: string;
+  name?: string;
+  description?: string;
+  type: TypeMeta;
+  props: ResolvedProp[];
+  events: ResolvedEvent[];
+  slots: ResolvedSlot[];
+  exposed: ResolvedExposed[];
+}
+
 const PRIMITIVE_ARRAY = [
   "string",
   "number",
@@ -175,19 +186,24 @@ export class ComponentMetaResolver {
     return normalizePath(path.resolve(this.root, filePath));
   }
 
+  toRelativePath(filePath: string) {
+    return normalizePath(path.relative(this.root, filePath));
+  }
+
   normalizeDeclarations(declarations: Declaration[]): Declaration[] {
     return declarations
       .filter((i) => path.resolve(i.file).startsWith(this.root))
       .map((i) => ({
-        file: normalizePath(path.relative(this.root, i.file)),
+        file: this.toRelativePath(i.file),
         range: i.range,
       }));
   }
 
-  resolveComponentMeta(fileName: string, exportName?: string) {
+  resolveComponentMeta(fileName: string, exportName?: string): ResolvedComponentMeta {
     const meta = this.getComponentMeta(fileName, exportName);
 
     return {
+      file: this.toRelativePath(fileName),
       name: meta.name,
       description: meta.description,
       type: meta.type,
