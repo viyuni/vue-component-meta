@@ -53,21 +53,21 @@ function getProp(name: string) {
 
 describe("primitive props", () => {
   it("name: string → primitive", () => {
-    expect(getProp("name").resolve).toMatchObject<ResolvedSchema>({
+    expect(getProp("name").resolved).toMatchObject<ResolvedSchema>({
       kind: "primitive",
       type: "string",
     });
   });
 
   it("disabled?: boolean → primitive (optional stripped)", () => {
-    expect(getProp("disabled").resolve).toMatchObject<ResolvedSchema>({
+    expect(getProp("disabled").resolved).toMatchObject<ResolvedSchema>({
       kind: "primitive",
       type: "boolean",
     });
   });
 
   it("loading?: boolean → primitive (optional stripped)", () => {
-    expect(getProp("loading").resolve).toMatchObject<ResolvedSchema>({
+    expect(getProp("loading").resolved).toMatchObject<ResolvedSchema>({
       kind: "primitive",
       type: "boolean",
     });
@@ -78,7 +78,7 @@ describe("primitive props", () => {
 
 describe("enum props", () => {
   it("size?: enum → optional enum stripped of undefined", () => {
-    const t = getProp("size").resolve;
+    const t = getProp("size").resolved;
     expect(t.kind).toBe("enum");
     expect(t.values).toEqual(expect.arrayContaining(["sm", "md", "lg"]));
     expect(t.values).not.toContain("undefined");
@@ -87,7 +87,7 @@ describe("enum props", () => {
 
 describe("object props", () => {
   it("config keeps first-level fields", () => {
-    const t = getProp("config").resolve;
+    const t = getProp("config").resolved;
     expect(t.kind).toBe("object");
     expect(t.fields).toMatchObject({
       label: {
@@ -112,7 +112,7 @@ describe("object props", () => {
       .resolveProps(meta.props)
       .find((prop) => prop.name === "config");
     expect(shallowConfig).toBeDefined();
-    expect(shallowConfig!.resolve).toMatchObject({
+    expect(shallowConfig!.resolved).toMatchObject({
       kind: "object",
       fields: {
         nested: {
@@ -121,13 +121,13 @@ describe("object props", () => {
         },
       },
     });
-    expect(shallowConfig!.resolve.fields?.nested.fields).toBeUndefined();
+    expect(shallowConfig!.resolved.fields?.nested.fields).toBeUndefined();
   });
 });
 
 describe("array props", () => {
   it("options?: array enum strips undefined from enum values", () => {
-    const t = getProp("options").resolve;
+    const t = getProp("options").resolved;
     expect(t.kind).toBe("array");
     expect(t.itemType).toMatchObject({
       kind: "enum",
@@ -137,7 +137,7 @@ describe("array props", () => {
   });
 
   it("tuple arrays fall back to a primitive union item type", () => {
-    const t = getProp("tuple").resolve;
+    const t = getProp("tuple").resolved;
     expect(t.kind).toBe("array");
     expect(t.itemType).toMatchObject<ResolvedSchema>({
       kind: "primitive",
@@ -153,7 +153,7 @@ describe("resolveComponentMeta", () => {
 
   it("resolves event payload schemas", () => {
     const change = resolvedMeta.events.find((event) => event.name === "change");
-    expect(change?.resolves).toEqual([
+    expect(change?.resolved).toEqual([
       {
         kind: "primitive",
         type: "string",
@@ -163,7 +163,7 @@ describe("resolveComponentMeta", () => {
 
   it("resolves slot payload schemas", () => {
     const header = resolvedMeta.slots.find((slot) => slot.name === "header");
-    expect(header?.resolve).toMatchObject({
+    expect(header?.resolved).toMatchObject({
       kind: "object",
       fields: {
         title: {
@@ -177,11 +177,11 @@ describe("resolveComponentMeta", () => {
   it("resolves exposed members", () => {
     const focus = resolvedMeta.exposed.find((item) => item.name === "focus");
     const value = resolvedMeta.exposed.find((item) => item.name === "value");
-    expect(focus?.resolve).toMatchObject({
+    expect(focus?.resolved).toMatchObject({
       kind: "event",
       params: [],
     });
-    expect(value?.resolve).toMatchObject({
+    expect(value?.resolved).toMatchObject({
       kind: "primitive",
       type: "string",
     });

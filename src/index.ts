@@ -22,14 +22,48 @@ export interface ResolvedSchema {
   params?: { index: number; type: ResolvedSchema }[];
 }
 
+export interface ResolvedTag {
+  name: string;
+  text?: string;
+}
+
 export interface ResolvedProp {
   name: string;
   description: string;
   required: boolean;
   default?: string;
-  tags: { name: string; text?: string }[];
+  tags: ResolvedTag[];
   originalType: string;
-  resolve: ResolvedSchema;
+  resolved: ResolvedSchema;
+  declarations: Declaration[];
+}
+
+export interface ResolvedEvent {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  signature: string;
+  originalType: string;
+  resolved: ResolvedSchema[];
+  declarations: Declaration[];
+}
+
+export interface ResolvedSlot {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  originalType: string;
+  resolved: ResolvedSchema;
+  declarations: Declaration[];
+}
+
+export interface ResolvedExposed {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  originalType: string;
+  resolved: ResolvedSchema;
+  declarations: Declaration[];
 }
 
 const PRIMITIVE_ARRAY = [
@@ -170,41 +204,41 @@ export class ComponentMetaResolver {
         default: i.default,
         tags: i.tags ?? [],
         originalType: i.type,
-        resolve: this.resolveSchema(i.schema, i.required),
+        resolved: this.resolveSchema(i.schema, i.required),
         declarations: this.normalizeDeclarations(i.getDeclarations()),
       }));
   }
 
-  resolveEvents(events: EventMeta[]) {
+  resolveEvents(events: EventMeta[]): ResolvedEvent[] {
     return events.map((i) => ({
       name: i.name,
       description: i.description,
       tags: i.tags ?? [],
       signature: i.signature,
       originalType: i.type,
-      resolves: i.schema.map((j) => this.resolveSchema(j)),
+      resolved: i.schema.map((j) => this.resolveSchema(j)),
       declarations: this.normalizeDeclarations(i.getDeclarations()),
     }));
   }
 
-  resolveSlots(slots: SlotMeta[]) {
+  resolveSlots(slots: SlotMeta[]): ResolvedSlot[] {
     return slots.map((i) => ({
       name: i.name,
       description: i.description,
       tags: i.tags ?? [],
       originalType: i.type,
-      resolve: this.resolveSchema(i.schema),
+      resolved: this.resolveSchema(i.schema),
       declarations: this.normalizeDeclarations(i.getDeclarations()),
     }));
   }
 
-  resolveExposed(exposes: ExposeMeta[]) {
+  resolveExposed(exposes: ExposeMeta[]): ResolvedExposed[] {
     return exposes.map((i) => ({
       name: i.name,
       description: i.description,
       tags: i.tags ?? [],
       originalType: i.type,
-      resolve: this.resolveSchema(i.schema),
+      resolved: this.resolveSchema(i.schema),
       declarations: this.normalizeDeclarations(i.getDeclarations()),
     }));
   }

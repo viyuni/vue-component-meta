@@ -63,10 +63,42 @@ Each prop includes:
 - `default`
 - `tags`
 - `originalType`
-- `resolve`
+- `resolved`
 - `declarations`
 
-The `resolve` field uses a normalized schema shape:
+`events`, `slots`, and `exposed` use matching normalized entry shapes too:
+
+```ts
+interface ResolvedEvent {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  signature: string;
+  originalType: string;
+  resolves: ResolvedSchema[];
+  declarations: Declaration[];
+}
+
+interface ResolvedSlot {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  originalType: string;
+  resolved: ResolvedSchema;
+  declarations: Declaration[];
+}
+
+interface ResolvedExposed {
+  name: string;
+  description: string;
+  tags: ResolvedTag[];
+  originalType: string;
+  resolved: ResolvedSchema;
+  declarations: Declaration[];
+}
+```
+
+The `resolved` field uses a normalized schema shape:
 
 ```ts
 interface ResolvedSchema {
