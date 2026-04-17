@@ -173,8 +173,6 @@ export class ComponentMetaResolver {
   }
 
   normalizeDeclarations(declarations: Declaration[]): Declaration[] {
-    console.log(this.root);
-
     return declarations
       .filter((i) => path.resolve(i.file).startsWith(this.root))
       .map((i) => ({
