@@ -20,7 +20,7 @@ vp add @viyuni/vue-component-meta
 
 ```ts
 import path from "node:path";
-import { ComponentMetaResolver } from "@viyuni/vue-component-meta";
+import { ComponentMetaResolver, TypeMeta } from "@viyuni/vue-component-meta";
 
 const resolver = new ComponentMetaResolver({
   root: process.cwd(),
@@ -48,7 +48,29 @@ Options:
 
 ### `resolver.resolveComponentMeta(fileName, exportName?)`
 
-Returns normalized metadata for:
+Returns a `ResolvedComponentMeta` object:
+
+```ts
+interface ResolvedComponentMeta {
+  file: string;
+  name?: string;
+  description?: string;
+  type: TypeMeta;
+  props: ResolvedProp[];
+  events: ResolvedEvent[];
+  slots: ResolvedSlot[];
+  exposed: ResolvedExposed[];
+}
+```
+
+Top-level fields:
+
+- `file`: component path relative to the configured `root`
+- `name`: resolved component name when available
+- `description`: component-level description when available
+- `type`: raw component type metadata from `vue-component-meta`
+
+Collection fields:
 
 - `props`
 - `events`
@@ -97,6 +119,8 @@ interface ResolvedExposed {
   declarations: Declaration[];
 }
 ```
+
+`TypeMeta` is also re-exported from this package, so callers can type the raw `type` field without importing from `vue-component-meta` directly.
 
 The `resolved` field uses a normalized schema shape:
 
