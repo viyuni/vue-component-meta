@@ -64,6 +64,7 @@ Each prop includes:
 - `tags`
 - `originalType`
 - `resolve`
+- `declarations`
 
 The `resolve` field uses a normalized schema shape:
 
@@ -77,6 +78,20 @@ interface ResolvedSchema {
   params?: { index: number; type: ResolvedSchema }[];
 }
 ```
+
+The `declarations` field contains the source declarations collected from `vue-component-meta`, filtered to files inside the current project root and normalized to relative paths:
+
+```ts
+interface ResolvedDeclaration {
+  file: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+}
+```
+
+`events`, `slots`, and `exposed` entries also include `declarations`, so you can map resolved metadata back to its original source location.
 
 ### Other methods
 
@@ -106,15 +121,7 @@ This package turns that raw metadata into a more direct data model so downstream
 
 ## Repository
 
-The project is currently hosted at:
-
-- `https://github.com/YanChenBai/component-meta`
-
-It is planned to move to:
-
 - `https://github.com/viyuni/component-meta`
-
-Package metadata is already aligned with the future `viyuni` namespace.
 
 ## Development
 
