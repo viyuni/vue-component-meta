@@ -43,11 +43,8 @@
     "release": "vpr release:prepare && bumpp"
   },
   "dependencies": {
-    "pathe": "^2.0.3",
     "unplugin-utils": "^0.3.1",
-    "vue": "3.6.0-beta.8",
-    "vue-component-meta": "^3.2.6",
-    "vue-jsx-vapor": "^3.2.10"
+    "vue-component-meta": "^3.2.6"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
@@ -55,7 +52,8 @@
     "bumpp": "^11.0.1",
     "jiti": "^2.6.1",
     "typescript": "^6.0.3",
-    "vite-plus": "^0.1.18"
+    "vite-plus": "^0.1.18",
+    "vue": "3.6.0-beta.8"
   },
   "packageManager": "pnpm@10.33.0"
 }
