@@ -1,6 +1,6 @@
-# @viyuni/component-meta
+# @viyuni/vue-component-meta
 
-`@viyuni/component-meta` is a small wrapper around [`vue-component-meta`](https://github.com/vuejs/language-tools/tree/master/packages/component-meta) for resolving Vue component metadata into a simpler, easier-to-consume shape.
+`@viyuni/vue-component-meta` is a small wrapper around [`vue-component-meta`](https://github.com/vuejs/language-tools/tree/master/packages/component-meta) for resolving Vue component metadata into a simpler, easier-to-consume shape.
 
 It keeps the power of `vue-component-meta`, while smoothing over a few rough edges for library tooling and documentation generation:
 
@@ -13,14 +13,14 @@ It keeps the power of `vue-component-meta`, while smoothing over a few rough edg
 ## Install
 
 ```bash
-vp add @viyuni/component-meta
+vp add @viyuni/vue-component-meta
 ```
 
 ## Usage
 
 ```ts
 import path from "node:path";
-import { ComponentMetaResolver } from "@viyuni/component-meta";
+import { ComponentMetaResolver } from "@viyuni/vue-component-meta";
 
 const resolver = new ComponentMetaResolver({
   root: process.cwd(),
@@ -121,7 +121,7 @@ This package turns that raw metadata into a more direct data model so downstream
 
 ## Repository
 
-- `https://github.com/viyuni/component-meta`
+- `https://github.com/viyuni/vue-component-meta`
 
 ## Development
 
@@ -131,6 +131,15 @@ vp check
 vp test
 vp pack
 ```
+
+## CI/CD
+
+GitHub Actions workflows are provided in [`.github/workflows/ci.yml`](/c:/Users/bycrx/MyCode/viyuni/component-meta/.github/workflows/ci.yml) and [`.github/workflows/release.yml`](/c:/Users/bycrx/MyCode/viyuni/component-meta/.github/workflows/release.yml).
+
+- CI runs on pushes to `main` and `master`, and on pull requests
+- Release runs when pushing a `v*` tag or when triggered manually from GitHub Actions
+- Release publishing is configured for GitHub OIDC trusted publishing with npm provenance
+- Make sure the npm package is connected to this GitHub repository in npm trusted publishing settings
 
 ## License
 

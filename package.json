@@ -1,24 +1,24 @@
 {
-  "name": "@viyuni/component-meta",
+  "name": "@viyuni/vue-component-meta",
   "version": "0.0.0",
-  "description": "A small wrapper around vue-component-meta that resolves Vue component metadata into a simpler schema.",
+  "description": "A small wrapper around vue-component-meta that resolves Vue component metadata into a simpler, easier-to-consume schema.",
   "keywords": [
-    "component-meta",
     "design-system",
     "documentation",
     "typescript",
     "vue",
-    "vue-component-meta"
+    "vue-component-meta",
+    "vue-component-meta-wrapper"
   ],
-  "homepage": "https://github.com/viyuni/component-meta#readme",
+  "homepage": "https://github.com/viyuni/vue-component-meta#readme",
   "bugs": {
-    "url": "https://github.com/viyuni/component-meta/issues"
+    "url": "https://github.com/viyuni/vue-component-meta/issues"
   },
   "license": "MIT",
   "author": "YanChenBai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/viyuni/component-meta.git"
+    "url": "git+https://github.com/viyuni/vue-component-meta.git"
   },
   "files": [
     "dist"
