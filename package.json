@@ -1,23 +1,37 @@
 {
   "name": "@viyuni/component-meta",
   "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
-  "homepage": "https://github.com/author/library#readme",
+  "description": "A small wrapper around vue-component-meta that resolves Vue component metadata into a simpler schema.",
+  "keywords": [
+    "component-meta",
+    "design-system",
+    "documentation",
+    "typescript",
+    "vue",
+    "vue-component-meta"
+  ],
+  "homepage": "https://github.com/viyuni/component-meta#readme",
   "bugs": {
-    "url": "https://github.com/author/library/issues"
+    "url": "https://github.com/viyuni/component-meta/issues"
   },
   "license": "MIT",
-  "author": "Author Name <author.name@mail.com>",
+  "author": "YanChenBai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/author/library.git"
+    "url": "git+https://github.com/viyuni/component-meta.git"
   },
   "files": [
     "dist"
   ],
   "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./dist/index.mjs",
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,17 +46,19 @@
     "prepare": "vp config"
   },
   "dependencies": {
-    "vue": "3.6.0-beta.10",
+    "pathe": "^2.0.3",
+    "unplugin-utils": "^0.3.1",
+    "vue": "3.6.0-beta.8",
     "vue-component-meta": "^3.2.6",
     "vue-jsx-vapor": "^3.2.10"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.6.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",
     "jiti": "^2.6.1",
-    "typescript": "^6.0.2",
-    "vite-plus": "^0.1.14"
+    "typescript": "^6.0.3",
+    "vite-plus": "^0.1.18"
   },
   "packageManager": "pnpm@10.33.0"
 }

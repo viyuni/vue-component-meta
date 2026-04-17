@@ -1,20 +1,13 @@
 import { defineConfig } from "vite-plus";
-import vueJsxVapor from "vue-jsx-vapor/vite";
 
 export default defineConfig({
-  plugins: [
-    vueJsxVapor({
-      macros: true,
-      interop: true,
-    }),
-  ],
   staged: {
     "*": "vp check --fix",
   },
   run: {
     tasks: {
       exec: {
-        command: "vp exec jiti ./src/index.ts",
+        command: "vp exec jiti ./src/test.ts",
       },
     },
   },
@@ -23,6 +16,9 @@ export default defineConfig({
       tsgo: true,
     },
     exports: true,
+    deps: {
+      neverBundle: ["typescript"],
+    },
   },
   lint: {
     options: {

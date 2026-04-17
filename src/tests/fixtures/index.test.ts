@@ -1,0 +1,230 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createChecker } from "vue-component-meta";
+import { describe, it, expect, beforeAll } from "vite-plus/test";
+import { ComponentMetaResolver, type ResolvedProp, type ResolvedSchema } from "../../index.ts";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const fixturePath = path.resolve(__dirname, "./demo.vue");
+const checker = createChecker(path.resolve(__dirname, "../../../tsconfig.json"), {
+  schema: true,
+});
+const resolver = new ComponentMetaResolver({
+  tsconfig: path.resolve(__dirname, "../../../tsconfig.json"),
+  root: path.resolve(__dirname, "../../.."),
+  checkerOptions: {
+    schema: true,
+  },
+});
+const shallowResolver = new ComponentMetaResolver({
+  tsconfig: path.resolve(__dirname, "../../../tsconfig.json"),
+  root: path.resolve(__dirname, "../../.."),
+  maxDepth: 0,
+  checkerOptions: {
+    schema: true,
+  },
+});
+
+type ComponentMeta = ReturnType<typeof checker.getComponentMeta>;
+
+let resolved: ResolvedProp[];
+let events: ComponentMeta["events"];
+let slots: ComponentMeta["slots"];
+let exposed: ComponentMeta["exposed"];
+let resolvedMeta: ReturnType<ComponentMetaResolver["resolveComponentMeta"]>;
+
+beforeAll(() => {
+  const meta = checker.getComponentMeta(fixturePath);
+  resolved = resolver.resolveProps(meta.props);
+  events = meta.events;
+  slots = meta.slots;
+  exposed = meta.exposed;
+  resolvedMeta = resolver.resolveComponentMeta(fixturePath);
+});
+
+function getProp(name: string) {
+  const p = resolved.find((p) => p.name === name);
+  if (!p) throw new Error(`prop "${name}" not found`);
+  return p;
+}
+
+// ── primitive ────────────────────────────────────────────────────────────────
+
+describe("primitive props", () => {
+  it("name: string → primitive", () => {
+    expect(getProp("name").resolve).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "string",
+    });
+  });
+
+  it("disabled?: boolean → primitive (optional stripped)", () => {
+    expect(getProp("disabled").resolve).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "boolean",
+    });
+  });
+
+  it("loading?: boolean → primitive (optional stripped)", () => {
+    expect(getProp("loading").resolve).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "boolean",
+    });
+  });
+});
+
+// ── enum ─────────────────────────────────────────────────────────────────────
+
+describe("enum props", () => {
+  it("size?: enum → optional enum stripped of undefined", () => {
+    const t = getProp("size").resolve;
+    expect(t.kind).toBe("enum");
+    expect(t.values).toEqual(expect.arrayContaining(["sm", "md", "lg"]));
+    expect(t.values).not.toContain("undefined");
+  });
+});
+
+describe("object props", () => {
+  it("config keeps first-level fields", () => {
+    const t = getProp("config").resolve;
+    expect(t.kind).toBe("object");
+    expect(t.fields).toMatchObject({
+      label: {
+        kind: "primitive",
+        type: "string",
+      },
+      nested: {
+        kind: "object",
+        fields: {
+          count: {
+            kind: "primitive",
+            type: "number",
+          },
+        },
+      },
+    });
+  });
+
+  it("maxDepth can flatten nested objects earlier", () => {
+    const meta = checker.getComponentMeta(fixturePath);
+    const shallowConfig = shallowResolver
+      .resolveProps(meta.props)
+      .find((prop) => prop.name === "config");
+    expect(shallowConfig).toBeDefined();
+    expect(shallowConfig!.resolve).toMatchObject({
+      kind: "object",
+      fields: {
+        nested: {
+          kind: "object",
+          type: "{ count: number; }",
+        },
+      },
+    });
+    expect(shallowConfig!.resolve.fields?.nested.fields).toBeUndefined();
+  });
+});
+
+describe("array props", () => {
+  it("options?: array enum strips undefined from enum values", () => {
+    const t = getProp("options").resolve;
+    expect(t.kind).toBe("array");
+    expect(t.itemType).toMatchObject({
+      kind: "enum",
+    });
+    expect(t.itemType?.values).toEqual(expect.arrayContaining(["sm", "md"]));
+    expect(t.itemType?.values).not.toContain("undefined");
+  });
+
+  it("tuple arrays fall back to a primitive union item type", () => {
+    const t = getProp("tuple").resolve;
+    expect(t.kind).toBe("array");
+    expect(t.itemType).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "string | number | boolean",
+    });
+  });
+});
+
+describe("resolveComponentMeta", () => {
+  it("matches the per-section resolvers for props", () => {
+    expect(resolvedMeta.props).toEqual(resolved);
+  });
+
+  it("resolves event payload schemas", () => {
+    const change = resolvedMeta.events.find((event) => event.name === "change");
+    expect(change?.resolves).toEqual([
+      {
+        kind: "primitive",
+        type: "string",
+      },
+    ]);
+  });
+
+  it("resolves slot payload schemas", () => {
+    const header = resolvedMeta.slots.find((slot) => slot.name === "header");
+    expect(header?.resolve).toMatchObject({
+      kind: "object",
+      fields: {
+        title: {
+          kind: "primitive",
+          type: "string",
+        },
+      },
+    });
+  });
+
+  it("resolves exposed members", () => {
+    const focus = resolvedMeta.exposed.find((item) => item.name === "focus");
+    const value = resolvedMeta.exposed.find((item) => item.name === "value");
+    expect(focus?.resolve).toMatchObject({
+      kind: "event",
+      params: [],
+    });
+    expect(value?.resolve).toMatchObject({
+      kind: "primitive",
+      type: "string",
+    });
+  });
+});
+
+// ── emits ────────────────────────────────────────────────────────────────────
+
+describe("emits", () => {
+  it("click event exists", () => {
+    expect(events.find((e) => e.name === "click")).toBeDefined();
+  });
+
+  it("change event exists", () => {
+    expect(events.find((e) => e.name === "change")).toBeDefined();
+  });
+});
+
+// ── slots ────────────────────────────────────────────────────────────────────
+
+describe("slots", () => {
+  it("default slot exists", () => {
+    expect(slots.find((s) => s.name === "default")).toBeDefined();
+  });
+
+  it("header slot exists with title prop", () => {
+    const header = slots.find((s) => s.name === "header");
+    expect(header).toBeDefined();
+    const schema = header!.schema as any;
+    expect(schema?.schema).toHaveProperty("title");
+  });
+});
+
+// ── expose ───────────────────────────────────────────────────────────────────
+
+describe("expose", () => {
+  it("focus is exposed", () => {
+    expect(exposed.find((e) => e.name === "focus")).toBeDefined();
+  });
+
+  it("value is exposed as string", () => {
+    const val = exposed.find((e) => e.name === "value");
+    expect(val).toBeDefined();
+    expect(val!.type).toContain("string");
+  });
+});

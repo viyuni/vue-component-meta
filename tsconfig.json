@@ -17,7 +17,8 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "preserve",
-    "jsxImportSource": "vue-jsx-vapor"
+    "jsxImportSource": "vue-jsx-vapor",
+    "rewriteRelativeImportExtensions": true
   },
-  "include": ["src"]
+  "include": ["src/**/*"]
 }

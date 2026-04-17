@@ -1,19 +1,459 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createChecker } from "vue-component-meta";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const tsconfigPath = path.resolve(__dirname, "../tsconfig.json");
+import { normalizePath } from "unplugin-utils";
+import {
+  createChecker,
+  type ComponentMetaChecker,
+  type Declaration,
+  type EventMeta,
+  type ExposeMeta,
+  type MetaCheckerOptions,
+  type PropertyMeta,
+  type PropertyMetaSchema,
+  type SlotMeta,
+} from "vue-component-meta";
 
-export const checker = createChecker(tsconfigPath, {});
+export interface ResolvedSchema {
+  kind: "primitive" | "enum" | "array" | "object" | "event";
+  type: string;
+  values?: string[];
+  fields?: Record<string, ResolvedSchema>;
+  itemType?: ResolvedSchema;
+  params?: { index: number; type: ResolvedSchema }[];
+}
 
-const file = path.resolve(__dirname, "../src/demo.vue");
+export interface ResolvedProp {
+  name: string;
+  description: string;
+  required: boolean;
+  default?: string;
+  tags: { name: string; text?: string }[];
+  originalType: string;
+  resolve: ResolvedSchema;
+}
 
-const meta = checker.getComponentMeta(file);
+const PRIMITIVE_ARRAY = [
+  "string",
+  "number",
+  "boolean",
+  "undefined",
+  "null",
+  "any",
+  "unknown",
+  "never",
+  "void",
+  "symbol",
+  "bigint",
+] as const;
 
-for (const prop of meta.props) {
-  if (prop.global) continue;
+export type PrimitiveType = (typeof PRIMITIVE_ARRAY)[number];
 
-  console.log(prop.name, ":", prop.type);
-  console.log("TypeObject:", prop.getTypeObject());
+const PRIMITIVE_TYPES = new Set(PRIMITIVE_ARRAY);
+
+function isPrimitiveType(type: any): type is PrimitiveType {
+  return PRIMITIVE_TYPES.has(type);
+}
+
+function stripUndefinedFromType(type: string) {
+  return type
+    .split("|")
+    .map((t) => t.trim())
+    .filter((t) => t !== "undefined")
+    .join(" | ");
+}
+
+/**
+ * 去掉字符串字面量的外层引号：`"\"foo\""` -> `"foo"`
+ */
+function parseEnumValue(s: PropertyMetaSchema): string {
+  const raw = typeof s === "string" ? s : s.type;
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "string" ? parsed : raw;
+  } catch {
+    return raw;
+  }
+}
+
+function getSchemaType(schema: PropertyMetaSchema) {
+  return typeof schema === "string" ? schema : schema.type;
+}
+
+function normalizeEnumValues(values: PropertyMetaSchema[] | undefined, required: boolean) {
+  const normalizedValues = values?.map(parseEnumValue) ?? [];
+  return required ? normalizedValues : normalizedValues.filter((value) => value !== "undefined");
+}
+
+function stripUndefinedSchemaValues(values: PropertyMetaSchema[] | undefined) {
+  return (values ?? []).filter((value) => getSchemaType(value) !== "undefined");
+}
+
+function joinUniqueTypes(types: string[]) {
+  return [...new Set(types)].join(" | ");
+}
+
+export interface ComponentMetaResolverOptions {
+  /**
+   * Root directory of the project.
+   */
+  root?: string;
+
+  /**
+   * Path to the tsconfig file.
+   */
+  tsconfig: string;
+
+  /**
+   * Options for the meta checker.
+   */
+  checkerOptions?: MetaCheckerOptions;
+
+  /**
+   * Maximum depth of the schema resolution.
+   * @default 1
+   */
+  maxDepth?: number;
+}
+
+export class ComponentMetaResolver {
+  private checker: ComponentMetaChecker;
+  private tsconfig: string;
+  private checkerOptions?: MetaCheckerOptions;
+  private root: string;
+  private maxDepth: number;
+
+  constructor(options: ComponentMetaResolverOptions) {
+    this.tsconfig = options.tsconfig;
+    this.checkerOptions = options.checkerOptions ?? { schema: true };
+    this.checker = createChecker(this.tsconfig, this.checkerOptions);
+    this.root = options.root ?? process.cwd();
+    this.maxDepth = options.maxDepth ?? 1;
+  }
+
+  normalizePath(filePath: string) {
+    if (path.isAbsolute(filePath)) {
+      return normalizePath(filePath);
+    }
+
+    return normalizePath(path.resolve(this.root, filePath));
+  }
+
+  normalizeDeclarations(declarations: Declaration[]): Declaration[] {
+    console.log(this.root);
+
+    return declarations
+      .filter((i) => path.resolve(i.file).startsWith(this.root))
+      .map((i) => ({
+        file: normalizePath(path.relative(this.root, i.file)),
+        range: i.range,
+      }));
+  }
+
+  resolveComponentMeta(fileName: string, exportName?: string) {
+    const meta = this.getComponentMeta(fileName, exportName);
+
+    return {
+      props: this.resolveProps(meta.props),
+      events: this.resolveEvents(meta.events),
+      slots: this.resolveSlots(meta.slots),
+      exposed: this.resolveExposed(meta.exposed),
+    };
+  }
+
+  resolveProps(props: PropertyMeta[]): ResolvedProp[] {
+    return props
+      .filter((i) => !i.global)
+      .map((i) => ({
+        name: i.name,
+        description: i.description ?? "",
+        required: i.required,
+        default: i.default,
+        tags: i.tags ?? [],
+        originalType: i.type,
+        resolve: this.resolveSchema(i.schema, i.required),
+        declarations: this.normalizeDeclarations(i.getDeclarations()),
+      }));
+  }
+
+  resolveEvents(events: EventMeta[]) {
+    return events.map((i) => ({
+      name: i.name,
+      description: i.description,
+      tags: i.tags ?? [],
+      signature: i.signature,
+      originalType: i.type,
+      resolves: i.schema.map((j) => this.resolveSchema(j)),
+      declarations: this.normalizeDeclarations(i.getDeclarations()),
+    }));
+  }
+
+  resolveSlots(slots: SlotMeta[]) {
+    return slots.map((i) => ({
+      name: i.name,
+      description: i.description,
+      tags: i.tags ?? [],
+      originalType: i.type,
+      resolve: this.resolveSchema(i.schema),
+      declarations: this.normalizeDeclarations(i.getDeclarations()),
+    }));
+  }
+
+  resolveExposed(exposes: ExposeMeta[]) {
+    return exposes.map((i) => ({
+      name: i.name,
+      description: i.description,
+      tags: i.tags ?? [],
+      originalType: i.type,
+      resolve: this.resolveSchema(i.schema),
+      declarations: this.normalizeDeclarations(i.getDeclarations()),
+    }));
+  }
+
+  resolveSchema(schema: PropertyMetaSchema, required = true, depth = 0): ResolvedSchema {
+    if (typeof schema === "string") {
+      return { kind: "primitive", type: schema };
+    }
+
+    if (depth >= this.maxDepth) {
+      return this.resolveSchemaAtDepthLimit(schema, required);
+    }
+
+    if (schema.kind === "enum") {
+      return this.resolvePrimitiveOrEnum(schema, required, depth);
+    }
+
+    if (schema.kind === "object") {
+      const rawFields = schema.schema ?? {};
+      const fields: Record<string, ResolvedSchema> = {};
+      for (const [key, fieldMeta] of Object.entries(rawFields)) {
+        fields[key] = this.resolveSchema(fieldMeta.schema, fieldMeta.required, depth + 1);
+      }
+
+      return {
+        kind: "object",
+        type: schema.type,
+        fields,
+      };
+    }
+
+    if (schema.kind === "array") {
+      const members = schema.schema ?? [];
+      return {
+        kind: "array",
+        type: schema.type,
+        itemType: this.resolveArrayItemType(
+          schema.type,
+          members,
+          (member) => this.resolveSchema(member, true, depth + 1),
+          required,
+        ),
+      };
+    }
+
+    return {
+      kind: "event",
+      type: schema.type,
+      params: (schema.schema ?? []).map((s, i) => ({
+        index: i,
+        type: this.resolveSchema(s, true, depth + 1),
+      })),
+    };
+  }
+
+  private resolvePrimitiveOrEnum(
+    schema: Extract<PropertyMetaSchema, { kind: "enum" }>,
+    required: boolean,
+    depth: number,
+  ) {
+    if (isPrimitiveType(schema.type)) {
+      return { kind: "primitive", type: schema.type } as const;
+    }
+
+    const normalizedMembers = required
+      ? (schema.schema ?? [])
+      : stripUndefinedSchemaValues(schema.schema);
+
+    if (normalizedMembers.length === 1) {
+      const [member] = normalizedMembers;
+      if (typeof member !== "string" && member.kind !== "enum") {
+        return this.resolveSchema(member, true, depth);
+      }
+    }
+
+    if (!required) {
+      const cleaned = stripUndefinedFromType(schema.type);
+      if (isPrimitiveType(cleaned)) {
+        return { kind: "primitive", type: cleaned } as const;
+      }
+    }
+
+    return {
+      kind: "enum",
+      type: schema.type,
+      values: normalizeEnumValues(normalizedMembers, true),
+    } as const;
+  }
+
+  private resolveArrayItemType(
+    arrayType: string,
+    members: PropertyMetaSchema[],
+    resolveMember: (schema: PropertyMetaSchema) => ResolvedSchema,
+    required: boolean,
+  ) {
+    if (members.length === 0) {
+      return { kind: "primitive", type: "unknown" } as const;
+    }
+
+    if (members.length === 1) {
+      return resolveMember(members[0]);
+    }
+
+    const types = members.map(getSchemaType);
+    const values = normalizeEnumValues(members, required);
+    const inferredItemType = arrayType.endsWith("[]")
+      ? arrayType.slice(0, -2).trim()
+      : joinUniqueTypes(types);
+
+    if (types.every((type) => isPrimitiveType(type))) {
+      return {
+        kind: "primitive",
+        type: joinUniqueTypes(types),
+      } as const;
+    }
+
+    if (values.length === members.length) {
+      return {
+        kind: "enum",
+        type: inferredItemType,
+        values,
+      } as const;
+    }
+
+    return {
+      kind: "primitive",
+      type: joinUniqueTypes(types),
+    } as const;
+  }
+
+  private resolveSchemaAtDepthLimit(
+    schema: Exclude<PropertyMetaSchema, string>,
+    required: boolean,
+  ): ResolvedSchema {
+    if (schema.kind === "enum") {
+      return this.resolvePrimitiveOrEnum(schema, required, this.maxDepth);
+    }
+
+    if (schema.kind === "object") {
+      const fields = Object.fromEntries(
+        Object.entries(schema.schema ?? {}).map(([key, fieldMeta]) => [
+          key,
+          this.snapshotSchema(fieldMeta.schema, fieldMeta.required),
+        ]),
+      );
+
+      return {
+        kind: "object",
+        type: schema.type,
+        fields,
+      };
+    }
+
+    if (schema.kind === "array") {
+      const members = schema.schema ?? [];
+      return {
+        kind: "array",
+        type: schema.type,
+        itemType: this.resolveArrayItemAtDepthLimit(schema.type, members, required),
+      };
+    }
+
+    return {
+      kind: "event",
+      type: schema.type,
+      params: (schema.schema ?? []).map((item, index) => ({
+        index,
+        type: this.snapshotSchema(item, true),
+      })),
+    };
+  }
+
+  private resolveArrayItemAtDepthLimit(
+    arrayType: string,
+    members: PropertyMetaSchema[],
+    required: boolean,
+  ): ResolvedSchema {
+    if (members.length === 0) {
+      return { kind: "primitive", type: "unknown" };
+    }
+
+    if (members.length === 1) {
+      return this.snapshotSchema(members[0], true);
+    }
+
+    const types = members.map(getSchemaType);
+    const values = normalizeEnumValues(members, required);
+    const inferredItemType = arrayType.endsWith("[]")
+      ? arrayType.slice(0, -2).trim()
+      : joinUniqueTypes(types);
+
+    if (types.every((type) => isPrimitiveType(type))) {
+      return {
+        kind: "primitive",
+        type: joinUniqueTypes(types),
+      };
+    }
+
+    if (values.length === members.length) {
+      return {
+        kind: "enum",
+        type: inferredItemType,
+        values,
+      };
+    }
+
+    return {
+      kind: "primitive",
+      type: joinUniqueTypes(types),
+    };
+  }
+
+  private snapshotSchema(schema: PropertyMetaSchema, required: boolean): ResolvedSchema {
+    if (typeof schema === "string") {
+      return { kind: "primitive", type: schema };
+    }
+
+    if (schema.kind === "enum") {
+      return this.resolvePrimitiveOrEnum(schema, required, this.maxDepth);
+    }
+
+    return {
+      kind: schema.kind,
+      type: schema.type,
+    };
+  }
+
+  getExportNames(componentPath: string) {
+    return this.checker.getExportNames(this.normalizePath(componentPath));
+  }
+
+  getComponentMeta(fileName: string, exportName?: string) {
+    return this.checker.getComponentMeta(this.normalizePath(fileName), exportName);
+  }
+
+  updateFile(fileName: string, text: string) {
+    this.checker.updateFile(this.normalizePath(fileName), text);
+  }
+
+  deleteFile(fileName: string) {
+    this.checker.deleteFile(this.normalizePath(fileName));
+  }
+  reload() {
+    this.checker.reload();
+  }
+  clearCache() {
+    this.checker.clearCache();
+  }
+  getProgram() {
+    return this.checker.getProgram();
+  }
 }
