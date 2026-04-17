@@ -11,7 +11,10 @@ import {
   type PropertyMeta,
   type PropertyMetaSchema,
   type SlotMeta,
+  TypeMeta,
 } from "vue-component-meta";
+
+export { TypeMeta };
 
 export interface ResolvedSchema {
   kind: "primitive" | "enum" | "array" | "object" | "event";
@@ -185,6 +188,9 @@ export class ComponentMetaResolver {
     const meta = this.getComponentMeta(fileName, exportName);
 
     return {
+      name: meta.name,
+      description: meta.description,
+      type: meta.type,
       props: this.resolveProps(meta.props),
       events: this.resolveEvents(meta.events),
       slots: this.resolveSlots(meta.slots),
