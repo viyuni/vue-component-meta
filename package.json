@@ -43,7 +43,9 @@
     "test": "vp test",
     "check": "vp check",
     "prepublishOnly": "vp run build",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "release:prepare": "vp check && vp test && vp pack",
+    "release": "vpr release:prepare && bumpp"
   },
   "dependencies": {
     "pathe": "^2.0.3",
