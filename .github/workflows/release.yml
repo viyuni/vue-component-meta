@@ -36,4 +36,4 @@ jobs:
         run: vp pack
 
       - name: Publish package
-        run: vp pm publish --access public -- --provenance
+        run: vp pm publish --access public -- --provenance --no-git-checks
