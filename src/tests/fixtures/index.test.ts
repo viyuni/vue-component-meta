@@ -2,7 +2,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createChecker } from "vue-component-meta";
 import { describe, it, expect, beforeAll } from "vite-plus/test";
-import { ComponentMetaResolver, type ResolvedProp, type ResolvedSchema } from "../../index.ts";
+import { ComponentMetaResolver } from "../../index.ts";
+import type { ResolvedProp, ResolvedSchema } from "../../types.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
