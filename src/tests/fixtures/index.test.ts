@@ -81,6 +81,7 @@ describe("enum props", () => {
   it("size?: enum → optional enum stripped of undefined", () => {
     const t = getProp("size").resolved;
     expect(t.kind).toBe("enum");
+    if (t.kind !== "enum") throw new Error("Expected enum schema");
     expect(t.values).toEqual(expect.arrayContaining(["sm", "md", "lg"]));
     expect(t.values).not.toContain("undefined");
   });
@@ -90,6 +91,7 @@ describe("object props", () => {
   it("config keeps first-level fields", () => {
     const t = getProp("config").resolved;
     expect(t.kind).toBe("object");
+    if (t.kind !== "object") throw new Error("Expected object schema");
     expect(t.fields).toMatchObject({
       label: {
         kind: "primitive",
@@ -119,10 +121,15 @@ describe("object props", () => {
         nested: {
           kind: "object",
           type: "{ count: number; }",
+          fields: {},
         },
       },
     });
-    expect(shallowConfig!.resolved.fields?.nested.fields).toBeUndefined();
+    if (shallowConfig!.resolved.kind !== "object") throw new Error("Expected object schema");
+    expect(shallowConfig!.resolved.fields.nested).toMatchObject({
+      kind: "object",
+      fields: {},
+    });
   });
 });
 
@@ -130,17 +137,20 @@ describe("array props", () => {
   it("options?: array enum strips undefined from enum values", () => {
     const t = getProp("options").resolved;
     expect(t.kind).toBe("array");
-    expect(t.itemType).toMatchObject({
+    if (t.kind !== "array") throw new Error("Expected array schema");
+    expect(t.items).toMatchObject({
       kind: "enum",
     });
-    expect(t.itemType?.values).toEqual(expect.arrayContaining(["sm", "md"]));
-    expect(t.itemType?.values).not.toContain("undefined");
+    if (t.items.kind !== "enum") throw new Error("Expected enum item schema");
+    expect(t.items.values).toEqual(expect.arrayContaining(["sm", "md"]));
+    expect(t.items.values).not.toContain("undefined");
   });
 
   it("tuple arrays fall back to a primitive union item type", () => {
     const t = getProp("tuple").resolved;
     expect(t.kind).toBe("array");
-    expect(t.itemType).toMatchObject<ResolvedSchema>({
+    if (t.kind !== "array") throw new Error("Expected array schema");
+    expect(t.items).toMatchObject<ResolvedSchema>({
       kind: "primitive",
       type: "string | number | boolean",
     });

@@ -125,14 +125,42 @@ interface ResolvedExposed {
 The `resolved` field uses a normalized schema shape:
 
 ```ts
-interface ResolvedSchema {
-  kind: "primitive" | "enum" | "array" | "object" | "event";
+interface ResolvedPrimitiveSchema {
+  kind: "primitive";
   type: string;
-  values?: string[];
-  fields?: Record<string, ResolvedSchema>;
-  itemType?: ResolvedSchema;
-  params?: { index: number; type: ResolvedSchema }[];
 }
+
+interface ResolvedEnumSchema {
+  kind: "enum";
+  type: string;
+  values: string[];
+  resolved: ResolvedSchema;
+}
+
+interface ResolvedArraySchema {
+  kind: "array";
+  type: string;
+  items: ResolvedSchema;
+}
+
+interface ResolvedObjectSchema {
+  kind: "object";
+  type: string;
+  fields: Record<string, ResolvedSchema>;
+}
+
+interface ResolvedEventSchema {
+  kind: "event";
+  type: string;
+  params: { index: number; resolved: ResolvedSchema }[];
+}
+
+type ResolvedSchema =
+  | ResolvedPrimitiveSchema
+  | ResolvedEnumSchema
+  | ResolvedArraySchema
+  | ResolvedObjectSchema
+  | ResolvedEventSchema;
 ```
 
 The `declarations` field contains the source declarations collected from `vue-component-meta`, filtered to files inside the current project root and normalized to relative paths:

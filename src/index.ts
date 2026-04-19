@@ -194,7 +194,7 @@ export class ComponentMetaResolver {
       return {
         kind: "array",
         type: schema.type,
-        itemType: this.resolveArrayItemType(
+        items: this.resolveArrayItemType(
           schema.type,
           members,
           (member) => this.resolveSchema(member, true, depth + 1),
@@ -208,7 +208,7 @@ export class ComponentMetaResolver {
       type: schema.type,
       params: (schema.schema ?? []).map((s, i) => ({
         index: i,
-        type: this.resolveSchema(s, true, depth + 1),
+        resolved: this.resolveSchema(s, true, depth + 1),
       })),
     };
   }
@@ -244,6 +244,12 @@ export class ComponentMetaResolver {
       kind: "enum",
       type: schema.type,
       values: normalizeEnumValues(normalizedMembers, true),
+      resolved: {
+        kind: "primitive",
+        type:
+          stripUndefinedFromType(schema.type) ||
+          joinUniqueTypes(normalizedMembers.map(getSchemaType)),
+      },
     } as const;
   }
 
@@ -279,6 +285,10 @@ export class ComponentMetaResolver {
         kind: "enum",
         type: inferredItemType,
         values,
+        resolved: {
+          kind: "primitive",
+          type: inferredItemType,
+        },
       } as const;
     }
 
@@ -316,7 +326,7 @@ export class ComponentMetaResolver {
       return {
         kind: "array",
         type: schema.type,
-        itemType: this.resolveArrayItemAtDepthLimit(schema.type, members, required),
+        items: this.resolveArrayItemAtDepthLimit(schema.type, members, required),
       };
     }
 
@@ -325,7 +335,7 @@ export class ComponentMetaResolver {
       type: schema.type,
       params: (schema.schema ?? []).map((item, index) => ({
         index,
-        type: this.snapshotSchema(item, true),
+        resolved: this.snapshotSchema(item, true),
       })),
     };
   }
@@ -361,6 +371,10 @@ export class ComponentMetaResolver {
         kind: "enum",
         type: inferredItemType,
         values,
+        resolved: {
+          kind: "primitive",
+          type: inferredItemType,
+        },
       };
     }
 
@@ -379,9 +393,26 @@ export class ComponentMetaResolver {
       return this.resolvePrimitiveOrEnum(schema, required, this.maxDepth);
     }
 
+    if (schema.kind === "object") {
+      return {
+        kind: "object",
+        type: schema.type,
+        fields: {},
+      };
+    }
+
+    if (schema.kind === "array") {
+      return {
+        kind: "array",
+        type: schema.type,
+        items: { kind: "primitive", type: "unknown" },
+      };
+    }
+
     return {
-      kind: schema.kind,
+      kind: "event",
       type: schema.type,
+      params: [],
     };
   }
 

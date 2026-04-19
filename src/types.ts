@@ -3,14 +3,42 @@ import { type Declaration, type MetaCheckerOptions, TypeMeta } from "vue-compone
 
 export type PrimitiveType = (typeof PRIMITIVE_ARRAY)[number];
 
-export interface ResolvedSchema {
-  kind: "primitive" | "enum" | "array" | "object" | "event";
+export interface ResolvedPrimitiveSchema {
+  kind: "primitive";
   type: string;
-  values?: string[];
-  fields?: Record<string, ResolvedSchema>;
-  itemType?: ResolvedSchema;
-  params?: { index: number; type: ResolvedSchema }[];
 }
+
+export interface ResolvedEnumSchema {
+  kind: "enum";
+  type: string;
+  values: string[];
+  resolved: ResolvedSchema;
+}
+
+export interface ResolvedArraySchema {
+  kind: "array";
+  type: string;
+  items: ResolvedSchema;
+}
+
+export interface ResolvedObjectSchema {
+  kind: "object";
+  type: string;
+  fields: Record<string, ResolvedSchema>;
+}
+
+export interface ResolvedEventSchema {
+  kind: "event";
+  type: string;
+  params: { index: number; resolved: ResolvedSchema }[];
+}
+
+export type ResolvedSchema =
+  | ResolvedPrimitiveSchema
+  | ResolvedEnumSchema
+  | ResolvedArraySchema
+  | ResolvedObjectSchema
+  | ResolvedEventSchema;
 
 export interface ResolvedTag {
   name: string;
