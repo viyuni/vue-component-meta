@@ -12,6 +12,11 @@ export default defineConfig({
     },
   },
   pack: {
+    entry: {
+      index: "src/index.ts",
+      utils: "src/utils.ts",
+      types: "src/types.ts",
+    },
     dts: {
       tsgo: true,
     },

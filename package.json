@@ -27,6 +27,8 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": "./dist/index.mjs",
+    "./types": "./dist/types.mjs",
+    "./utils": "./dist/utils.mjs",
     "./package.json": "./package.json"
   },
   "publishConfig": {

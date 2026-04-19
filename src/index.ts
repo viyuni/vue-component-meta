@@ -11,96 +11,18 @@ import {
   type PropertyMeta,
   type PropertyMetaSchema,
   type SlotMeta,
-  TypeMeta,
 } from "vue-component-meta";
 
-export { TypeMeta };
-
-export interface ResolvedSchema {
-  kind: "primitive" | "enum" | "array" | "object" | "event";
-  type: string;
-  values?: string[];
-  fields?: Record<string, ResolvedSchema>;
-  itemType?: ResolvedSchema;
-  params?: { index: number; type: ResolvedSchema }[];
-}
-
-export interface ResolvedTag {
-  name: string;
-  text?: string;
-}
-
-export interface ResolvedProp {
-  name: string;
-  description: string;
-  required: boolean;
-  default?: string;
-  tags: ResolvedTag[];
-  originalType: string;
-  resolved: ResolvedSchema;
-  declarations: Declaration[];
-}
-
-export interface ResolvedEvent {
-  name: string;
-  description: string;
-  tags: ResolvedTag[];
-  signature: string;
-  originalType: string;
-  resolved: ResolvedSchema[];
-  declarations: Declaration[];
-}
-
-export interface ResolvedSlot {
-  name: string;
-  description: string;
-  tags: ResolvedTag[];
-  originalType: string;
-  resolved: ResolvedSchema;
-  declarations: Declaration[];
-}
-
-export interface ResolvedExposed {
-  name: string;
-  description: string;
-  tags: ResolvedTag[];
-  originalType: string;
-  resolved: ResolvedSchema;
-  declarations: Declaration[];
-}
-
-export interface ResolvedComponentMeta {
-  file: string;
-  name?: string;
-  description?: string;
-  type: TypeMeta;
-  props: ResolvedProp[];
-  events: ResolvedEvent[];
-  slots: ResolvedSlot[];
-  exposed: ResolvedExposed[];
-}
-
-const PRIMITIVE_ARRAY = [
-  "string",
-  "number",
-  "boolean",
-  "undefined",
-  "null",
-  "any",
-  "unknown",
-  "never",
-  "void",
-  "symbol",
-  "bigint",
-] as const;
-
-export type PrimitiveType = (typeof PRIMITIVE_ARRAY)[number];
-
-const PRIMITIVE_TYPES = new Set(PRIMITIVE_ARRAY);
-
-function isPrimitiveType(type: any): type is PrimitiveType {
-  return PRIMITIVE_TYPES.has(type);
-}
+import type {
+  ComponentMetaResolverOptions,
+  ResolvedComponentMeta,
+  ResolvedEvent,
+  ResolvedExposed,
+  ResolvedProp,
+  ResolvedSchema,
+  ResolvedSlot,
+} from "./types.ts";
+import { isPrimitiveType } from "./utils.ts";
 
 function stripUndefinedFromType(type: string) {
   return type
@@ -138,29 +60,6 @@ function stripUndefinedSchemaValues(values: PropertyMetaSchema[] | undefined) {
 
 function joinUniqueTypes(types: string[]) {
   return [...new Set(types)].join(" | ");
-}
-
-export interface ComponentMetaResolverOptions {
-  /**
-   * Root directory of the project.
-   */
-  root?: string;
-
-  /**
-   * Path to the tsconfig file.
-   */
-  tsconfig: string;
-
-  /**
-   * Options for the meta checker.
-   */
-  checkerOptions?: MetaCheckerOptions;
-
-  /**
-   * Maximum depth of the schema resolution.
-   * @default 1
-   */
-  maxDepth?: number;
 }
 
 export class ComponentMetaResolver {
