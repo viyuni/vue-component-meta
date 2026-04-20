@@ -42,8 +42,6 @@ beforeAll(() => {
   slots = meta.slots;
   exposed = meta.exposed;
   resolvedMeta = resolver.resolveComponentMeta(fixturePath);
-
-  console.dir(resolvedMeta, { depth: 5 });
 });
 
 function getProp(name: string) {
