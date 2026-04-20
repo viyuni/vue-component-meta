@@ -59,7 +59,7 @@ export interface ResolvedProp {
   name: string;
   description: string;
   required: boolean;
-  default?: string;
+  default?: string | number | boolean | null | undefined;
   tags: ResolvedTag[];
   originalType: string;
   resolved: ResolvedSchema;

@@ -41,11 +41,14 @@ function isStringLiteralType(type: string) {
   );
 }
 
+function isQuotedString(value: string) {
+  return (
+    (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))
+  );
+}
+
 function stripLiteralQuotes(value: string) {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
+  if (isQuotedString(value)) {
     return value.slice(1, -1);
   }
   return value;
@@ -71,6 +74,40 @@ function isBooleanSchema(
   schemas: PropertyMetaSchema[],
 ): schemas is ["true", "false"] | ["false", "true"] {
   return schemas.length === 2 && schemas.includes("true") && schemas.includes("false");
+}
+
+function normalizeDefaultValue(value?: string) {
+  if (value == null) {
+    return undefined;
+  }
+
+  const text = value.trim();
+
+  if (!text || text === "undefined") {
+    return undefined;
+  }
+
+  if (text === "null") {
+    return null;
+  }
+
+  if (text === "true") {
+    return true;
+  }
+
+  if (text === "false") {
+    return false;
+  }
+
+  if (/^-?\d+(\.\d+)?$/.test(text)) {
+    return Number(text);
+  }
+
+  if (isQuotedString(text)) {
+    return stripLiteralQuotes(text);
+  }
+
+  return text;
 }
 
 export class ComponentMetaResolver {
@@ -131,7 +168,7 @@ export class ComponentMetaResolver {
         name: i.name,
         description: i.description ?? "",
         required: i.required,
-        default: i.default,
+        default: normalizeDefaultValue(i.default),
         tags: i.tags ?? [],
         originalType: i.type,
         resolved: this.resolveSchema(i.schema, i.type, i.required),

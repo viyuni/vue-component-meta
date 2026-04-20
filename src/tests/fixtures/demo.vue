@@ -2,9 +2,13 @@
 <script setup lang="ts">
 import type { CommonProps } from "./types.ts";
 
-const { color = "red" } = defineProps<
-  { name: string; color: "red" | "green" | "blue" } & CommonProps
->();
+const {
+  color = "red",
+  disabled = false,
+  retryCount = 3,
+  variant = "solid",
+  nil = null,
+} = defineProps<{ name: string; color: "red" | "green" | "blue" } & CommonProps>();
 
 defineEmits<{
   (e: "click"): void;

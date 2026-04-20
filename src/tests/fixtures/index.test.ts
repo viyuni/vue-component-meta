@@ -232,6 +232,30 @@ describe("props – array and tuple", () => {
   });
 });
 
+// ── Defaults ──────────────────────────────────────────────────────────────────
+
+describe("defaults", () => {
+  it("color: quoted string default is normalized without quotes", () => {
+    expect(prop("color").default).toBe("red");
+  });
+
+  it("disabled: boolean default is normalized to boolean", () => {
+    expect(prop("disabled").default).toBe(false);
+  });
+
+  it("retryCount: numeric default is normalized to number", () => {
+    expect(prop("retryCount").default).toBe(3);
+  });
+
+  it("variant: string literal default is normalized without quotes", () => {
+    expect(prop("variant").default).toBe("solid");
+  });
+
+  it("nil: null default is normalized to null", () => {
+    expect(prop("nil").default).toBeNull();
+  });
+});
+
 // ── Events ────────────────────────────────────────────────────────────────────
 
 describe("events", () => {
