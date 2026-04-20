@@ -1,6 +1,6 @@
 {
   "name": "@viyuni/vue-component-meta",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A small wrapper around vue-component-meta that resolves Vue component metadata into a simpler, easier-to-consume schema.",
   "keywords": [
     "design-system",
