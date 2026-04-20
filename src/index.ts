@@ -24,6 +24,21 @@ import type {
 } from "./types.ts";
 import { isPrimitiveType } from "./utils.ts";
 
+function cleanType(type: string) {
+  return type
+    .split("|")
+    .map((type) => type.trim())
+    .filter((type) => type !== "undefined");
+}
+
+function isBoolean(type: string) {
+  const types = cleanType(type);
+  return (
+    types.length > 0 &&
+    types.every((item) => item === "boolean" || item === "true" || item === "false")
+  );
+}
+
 export class ComponentMetaResolver {
   private checker: ComponentMetaChecker;
   private tsconfig: string;
@@ -173,15 +188,67 @@ export class ComponentMetaResolver {
   private resolvePrimitiveOrEnum(
     schema: Extract<PropertyMetaSchema, { kind: "enum" }>,
     depth: number,
-  ) {
+  ): ResolvedSchema {
     if (isPrimitiveType(schema.type)) {
       return { kind: "primitive", type: schema.type } as const;
+    }
+
+    const filteredSchema =
+      schema.schema?.filter((item) => !(typeof item === "string" && item === "undefined")) ?? [];
+    const undefinable = filteredSchema.length !== schema.schema?.length;
+
+    if (filteredSchema.length === 0) {
+      if (undefinable) {
+        return {
+          kind: "primitive",
+          type: "undefined",
+          undefinable: true,
+        };
+      }
+
+      return {
+        kind: "primitive",
+        type: "undefined",
+      };
+    }
+
+    if (isBoolean(schema.type)) {
+      if (undefinable) {
+        return {
+          kind: "primitive",
+          type: "boolean",
+          undefinable: true,
+        };
+      }
+
+      return {
+        kind: "primitive",
+        type: "boolean",
+      };
+    }
+
+    if (filteredSchema.length === 1) {
+      const resolved = this.resolveSchema(filteredSchema[0], depth);
+      if (!undefinable) {
+        return resolved;
+      }
+
+      return { ...resolved, undefinable: true } as ResolvedSchema;
+    }
+
+    if (undefinable) {
+      return {
+        kind: "enum",
+        type: schema.type,
+        values: filteredSchema.map((item) => this.resolveSchema(item, depth + 1)),
+        undefinable: true,
+      } as const;
     }
 
     return {
       kind: "enum",
       type: schema.type,
-      values: schema.schema?.map((item) => this.resolveSchema(item, depth + 1)) ?? [],
+      values: filteredSchema.map((item) => this.resolveSchema(item, depth + 1)),
     } as const;
   }
 

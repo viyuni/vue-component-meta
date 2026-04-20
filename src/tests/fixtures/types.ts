@@ -1,3 +1,8 @@
+export interface Options {
+  name: string;
+  title: string;
+}
+
 export interface CommonProps {
   disabled?: boolean;
   loading?: boolean;
@@ -9,7 +14,7 @@ export interface CommonProps {
       count: number;
     };
   };
-  options?: Array<"sm" | "md">;
+  options?: Options;
   tuple: [string, number, boolean];
   true: true;
 }

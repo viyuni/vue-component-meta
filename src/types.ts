@@ -6,30 +6,35 @@ export type PrimitiveType = (typeof PRIMITIVE_ARRAY)[number];
 export interface ResolvedPrimitiveSchema {
   kind: "primitive";
   type: string;
+  undefinable?: boolean;
 }
 
 export interface ResolvedEnumSchema {
   kind: "enum";
   type: string;
   values: ResolvedSchema[];
+  undefinable?: boolean;
 }
 
 export interface ResolvedArraySchema {
   kind: "array";
   type: string;
   items: ResolvedSchema[];
+  undefinable?: boolean;
 }
 
 export interface ResolvedObjectSchema {
   kind: "object";
   type: string;
   fields: Record<string, ResolvedSchema>;
+  undefinable?: boolean;
 }
 
 export interface ResolvedEventSchema {
   kind: "event";
   type: string;
   params: { index: number; resolved: ResolvedSchema }[];
+  undefinable?: boolean;
 }
 
 export type ResolvedSchema =

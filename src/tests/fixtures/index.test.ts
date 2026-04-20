@@ -42,6 +42,8 @@ beforeAll(() => {
   slots = meta.slots;
   exposed = meta.exposed;
   resolvedMeta = resolver.resolveComponentMeta(fixturePath);
+
+  console.dir(resolvedMeta.props, { depth: 5 });
 });
 
 function getProp(name: string) {
@@ -60,38 +62,34 @@ describe("primitive props", () => {
     });
   });
 
-  it("disabled?: boolean keeps undefined in enum members", () => {
+  it("disabled?: boolean resolves to primitive boolean and marks undefinable", () => {
     const t = getProp("disabled").resolved;
-    expect(t.kind).toBe("enum");
-    if (t.kind !== "enum") throw new Error("Expected enum schema");
-    expect(t.values).toEqual([
-      { kind: "primitive", type: "undefined" },
-      { kind: "primitive", type: "false" },
-      { kind: "primitive", type: "true" },
-    ]);
+    expect(t).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "boolean",
+      undefinable: true,
+    });
   });
 
-  it("loading?: boolean keeps undefined in enum members", () => {
+  it("loading?: boolean resolves to primitive boolean and marks undefinable", () => {
     const t = getProp("loading").resolved;
-    expect(t.kind).toBe("enum");
-    if (t.kind !== "enum") throw new Error("Expected enum schema");
-    expect(t.values).toEqual([
-      { kind: "primitive", type: "undefined" },
-      { kind: "primitive", type: "false" },
-      { kind: "primitive", type: "true" },
-    ]);
+    expect(t).toMatchObject<ResolvedSchema>({
+      kind: "primitive",
+      type: "boolean",
+      undefinable: true,
+    });
   });
 });
 
 // ── enum ─────────────────────────────────────────────────────────────────────
 
 describe("enum props", () => {
-  it("size?: enum keeps undefined member", () => {
+  it("size?: enum removes undefined member and marks undefinable", () => {
     const t = getProp("size").resolved;
     expect(t.kind).toBe("enum");
     if (t.kind !== "enum") throw new Error("Expected enum schema");
+    expect(t.undefinable).toBe(true);
     expect(t.values).toEqual([
-      { kind: "primitive", type: "undefined" },
       { kind: "primitive", type: '"sm"' },
       { kind: "primitive", type: '"md"' },
       { kind: "primitive", type: '"lg"' },
@@ -145,30 +143,20 @@ describe("object props", () => {
   });
 });
 
-describe("array props", () => {
-  it("options?: array enum keeps undefined member", () => {
+describe("object props", () => {
+  it("options?: object removes undefined member and marks undefinable", () => {
     const t = getProp("options").resolved;
-    expect(t.kind).toBe("enum");
-    if (t.kind !== "enum") throw new Error("Expected enum schema");
-    expect(t.values).toEqual([
-      { kind: "primitive", type: "undefined" },
-      {
-        kind: "array",
-        type: '("sm" | "md")[]',
-        items: [
-          {
-            kind: "enum",
-            type: '"sm" | "md"',
-            values: [
-              { kind: "primitive", type: '"sm"' },
-              { kind: "primitive", type: '"md"' },
-            ],
-          },
-        ],
-      },
-    ]);
+    expect(t.kind).toBe("object");
+    if (t.kind !== "object") throw new Error("Expected object schema");
+    expect(t.undefinable).toBe(true);
+    expect(t.fields).toMatchObject({
+      name: { kind: "primitive", type: "string" },
+      title: { kind: "primitive", type: "string" },
+    });
   });
+});
 
+describe("array props", () => {
   it("tuple arrays keep per-item schemas", () => {
     const t = getProp("tuple").resolved;
     expect(t.kind).toBe("array");
