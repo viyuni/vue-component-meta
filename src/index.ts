@@ -32,17 +32,21 @@ function stripUndefinedFromType(type: string) {
     .join(" | ");
 }
 
+function cleanEnumValue(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "string" ? parsed : value;
+  } catch {
+    return value;
+  }
+}
+
 /**
  * 去掉字符串字面量的外层引号：`"\"foo\""` -> `"foo"`
  */
 function parseEnumValue(s: PropertyMetaSchema): string {
   const raw = typeof s === "string" ? s : s.type;
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "string" ? parsed : raw;
-  } catch {
-    return raw;
-  }
+  return cleanEnumValue(raw);
 }
 
 function getSchemaType(schema: PropertyMetaSchema) {
@@ -60,6 +64,14 @@ function stripUndefinedSchemaValues(values: PropertyMetaSchema[] | undefined) {
 
 function joinUniqueTypes(types: string[]) {
   return [...new Set(types)].join(" | ");
+}
+
+function cleanDefault(propertyMeta: PropertyMeta) {
+  if (!propertyMeta.default) return propertyMeta.default;
+  if (typeof propertyMeta.schema === "string") return propertyMeta.default;
+  if (propertyMeta.schema.kind === "enum") return cleanEnumValue(propertyMeta.default);
+
+  return propertyMeta.default;
 }
 
 export class ComponentMetaResolver {
@@ -120,7 +132,7 @@ export class ComponentMetaResolver {
         name: i.name,
         description: i.description ?? "",
         required: i.required,
-        default: i.default,
+        default: cleanDefault(i),
         tags: i.tags ?? [],
         originalType: i.type,
         resolved: this.resolveSchema(i.schema, i.required),

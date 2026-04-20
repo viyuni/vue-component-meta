@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import type { CommonProps } from "./types.ts";
 
-defineProps<{ name: string } & CommonProps>();
+const { color = "red" } = defineProps<
+  { name: string; color: "red" | "green" | "blue" } & CommonProps
+>();
 
 defineEmits<{
   (e: "click"): void;
@@ -21,5 +23,5 @@ defineExpose({
 </script>
 
 <template>
-  <div><slot /></div>
+  <div><slot /> {{ color }}</div>
 </template>

@@ -42,6 +42,8 @@ beforeAll(() => {
   slots = meta.slots;
   exposed = meta.exposed;
   resolvedMeta = resolver.resolveComponentMeta(fixturePath);
+
+  console.dir(resolvedMeta, { depth: 5 });
 });
 
 function getProp(name: string) {
@@ -154,6 +156,16 @@ describe("array props", () => {
       kind: "primitive",
       type: "string | number | boolean",
     });
+  });
+});
+
+describe("default values", () => {
+  it("cleans enum string defaults by removing wrapped quotes", () => {
+    expect(getProp("color").default).toBe("red");
+  });
+
+  it("keeps props without defaults as undefined", () => {
+    expect(getProp("name").default).toBeUndefined();
   });
 });
 
