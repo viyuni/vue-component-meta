@@ -9,4 +9,4 @@ const resolver = new ComponentMetaResolver({
   root: process.cwd(),
 });
 
-console.dir(resolver.resolveComponentMeta("./src/demo/demo.vue"), { depth: 6 });
+console.dir(resolver.resolveComponentMeta("src/tests/fixtures/demo.vue").props, { depth: 6 });

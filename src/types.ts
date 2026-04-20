@@ -1,48 +1,54 @@
-import type { PRIMITIVE_ARRAY } from "./constants.ts";
 import { type Declaration, type MetaCheckerOptions, TypeMeta } from "vue-component-meta";
 
-export type PrimitiveType = (typeof PRIMITIVE_ARRAY)[number];
+export interface ResolvedSchemaBase {
+  kind: string;
+  type: string;
+  required: boolean;
+  nullable?: boolean;
+}
 
-export interface ResolvedPrimitiveSchema {
+export interface ResolvedPrimitiveSchema extends ResolvedSchemaBase {
   kind: "primitive";
-  type: string;
-  undefinable?: boolean;
 }
 
-export interface ResolvedEnumSchema {
+export interface ResolvedEnumSchema extends ResolvedSchemaBase {
   kind: "enum";
-  type: string;
-  values: ResolvedSchema[];
-  undefinable?: boolean;
+  value: string[];
 }
 
-export interface ResolvedArraySchema {
+export interface ResolvedUnionSchema extends ResolvedSchemaBase {
+  kind: "union";
+  value: ResolvedSchema[];
+}
+
+export interface ResolvedArraySchema extends ResolvedSchemaBase {
   kind: "array";
-  type: string;
-  items: ResolvedSchema[];
-  undefinable?: boolean;
+  value: ResolvedSchema;
 }
 
-export interface ResolvedObjectSchema {
+export interface ResolvedObjectSchema extends ResolvedSchemaBase {
   kind: "object";
-  type: string;
-  fields: Record<string, ResolvedSchema>;
-  undefinable?: boolean;
+  value: Record<string, ResolvedSchema>;
 }
 
-export interface ResolvedEventSchema {
+export interface ResolvedEventSchema extends ResolvedSchemaBase {
   kind: "event";
-  type: string;
-  params: { index: number; resolved: ResolvedSchema }[];
-  undefinable?: boolean;
+  value: ResolvedSchema[];
+}
+
+export interface ResolvedUnknownSchema extends ResolvedSchemaBase {
+  kind: "unknown";
+  value?: string;
 }
 
 export type ResolvedSchema =
   | ResolvedPrimitiveSchema
   | ResolvedEnumSchema
+  | ResolvedUnionSchema
   | ResolvedArraySchema
   | ResolvedObjectSchema
-  | ResolvedEventSchema;
+  | ResolvedEventSchema
+  | ResolvedUnknownSchema;
 
 export interface ResolvedTag {
   name: string;
