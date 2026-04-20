@@ -31,5 +31,7 @@ export default defineConfig({
       typeCheck: true,
     },
   },
-  fmt: {},
+  fmt: {
+    ignorePatterns: ["GEMINI.md", "CLAUDE.md"],
+  },
 });
