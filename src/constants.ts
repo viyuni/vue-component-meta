@@ -10,6 +10,8 @@ export const PRIMITIVE_ARRAY = [
   "void",
   "symbol",
   "bigint",
+  "true",
+  "false",
 ] as const;
 
 export const PRIMITIVE_TYPES = new Set(PRIMITIVE_ARRAY);

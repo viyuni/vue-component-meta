@@ -21,7 +21,7 @@ const resolver = new ComponentMetaResolver({
 const shallowResolver = new ComponentMetaResolver({
   tsconfig: path.resolve(__dirname, "../../../tsconfig.json"),
   root: path.resolve(__dirname, "../../.."),
-  maxDepth: 0,
+  maxDepth: 2,
   checkerOptions: {
     schema: true,
   },
@@ -60,30 +60,42 @@ describe("primitive props", () => {
     });
   });
 
-  it("disabled?: boolean → primitive (optional stripped)", () => {
-    expect(getProp("disabled").resolved).toMatchObject<ResolvedSchema>({
-      kind: "primitive",
-      type: "boolean",
-    });
+  it("disabled?: boolean keeps undefined in enum members", () => {
+    const t = getProp("disabled").resolved;
+    expect(t.kind).toBe("enum");
+    if (t.kind !== "enum") throw new Error("Expected enum schema");
+    expect(t.values).toEqual([
+      { kind: "primitive", type: "undefined" },
+      { kind: "primitive", type: "false" },
+      { kind: "primitive", type: "true" },
+    ]);
   });
 
-  it("loading?: boolean → primitive (optional stripped)", () => {
-    expect(getProp("loading").resolved).toMatchObject<ResolvedSchema>({
-      kind: "primitive",
-      type: "boolean",
-    });
+  it("loading?: boolean keeps undefined in enum members", () => {
+    const t = getProp("loading").resolved;
+    expect(t.kind).toBe("enum");
+    if (t.kind !== "enum") throw new Error("Expected enum schema");
+    expect(t.values).toEqual([
+      { kind: "primitive", type: "undefined" },
+      { kind: "primitive", type: "false" },
+      { kind: "primitive", type: "true" },
+    ]);
   });
 });
 
 // ── enum ─────────────────────────────────────────────────────────────────────
 
 describe("enum props", () => {
-  it("size?: enum → optional enum stripped of undefined", () => {
+  it("size?: enum keeps undefined member", () => {
     const t = getProp("size").resolved;
     expect(t.kind).toBe("enum");
     if (t.kind !== "enum") throw new Error("Expected enum schema");
-    expect(t.values).toEqual(expect.arrayContaining(["sm", "md", "lg"]));
-    expect(t.values).not.toContain("undefined");
+    expect(t.values).toEqual([
+      { kind: "primitive", type: "undefined" },
+      { kind: "primitive", type: '"sm"' },
+      { kind: "primitive", type: '"md"' },
+      { kind: "primitive", type: '"lg"' },
+    ]);
   });
 });
 
@@ -134,32 +146,44 @@ describe("object props", () => {
 });
 
 describe("array props", () => {
-  it("options?: array enum strips undefined from enum values", () => {
+  it("options?: array enum keeps undefined member", () => {
     const t = getProp("options").resolved;
-    expect(t.kind).toBe("array");
-    if (t.kind !== "array") throw new Error("Expected array schema");
-    expect(t.items).toMatchObject({
-      kind: "enum",
-    });
-    if (t.items.kind !== "enum") throw new Error("Expected enum item schema");
-    expect(t.items.values).toEqual(expect.arrayContaining(["sm", "md"]));
-    expect(t.items.values).not.toContain("undefined");
+    expect(t.kind).toBe("enum");
+    if (t.kind !== "enum") throw new Error("Expected enum schema");
+    expect(t.values).toEqual([
+      { kind: "primitive", type: "undefined" },
+      {
+        kind: "array",
+        type: '("sm" | "md")[]',
+        items: [
+          {
+            kind: "enum",
+            type: '"sm" | "md"',
+            values: [
+              { kind: "primitive", type: '"sm"' },
+              { kind: "primitive", type: '"md"' },
+            ],
+          },
+        ],
+      },
+    ]);
   });
 
-  it("tuple arrays fall back to a primitive union item type", () => {
+  it("tuple arrays keep per-item schemas", () => {
     const t = getProp("tuple").resolved;
     expect(t.kind).toBe("array");
     if (t.kind !== "array") throw new Error("Expected array schema");
-    expect(t.items).toMatchObject<ResolvedSchema>({
-      kind: "primitive",
-      type: "string | number | boolean",
-    });
+    expect(t.items).toEqual([
+      { kind: "primitive", type: "string" },
+      { kind: "primitive", type: "number" },
+      { kind: "primitive", type: "boolean" },
+    ]);
   });
 });
 
 describe("default values", () => {
-  it("cleans enum string defaults by removing wrapped quotes", () => {
-    expect(getProp("color").default).toBe("red");
+  it("keeps enum string defaults untouched", () => {
+    expect(getProp("color").default).toBe('"red"');
   });
 
   it("keeps props without defaults as undefined", () => {

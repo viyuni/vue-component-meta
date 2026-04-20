@@ -11,14 +11,13 @@ export interface ResolvedPrimitiveSchema {
 export interface ResolvedEnumSchema {
   kind: "enum";
   type: string;
-  values: string[];
-  resolved: ResolvedSchema;
+  values: ResolvedSchema[];
 }
 
 export interface ResolvedArraySchema {
   kind: "array";
   type: string;
-  items: ResolvedSchema;
+  items: ResolvedSchema[];
 }
 
 export interface ResolvedObjectSchema {

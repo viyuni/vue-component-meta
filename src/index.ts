@@ -24,56 +24,6 @@ import type {
 } from "./types.ts";
 import { isPrimitiveType } from "./utils.ts";
 
-function stripUndefinedFromType(type: string) {
-  return type
-    .split("|")
-    .map((t) => t.trim())
-    .filter((t) => t !== "undefined")
-    .join(" | ");
-}
-
-function cleanEnumValue(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return typeof parsed === "string" ? parsed : value;
-  } catch {
-    return value;
-  }
-}
-
-/**
- * 去掉字符串字面量的外层引号：`"\"foo\""` -> `"foo"`
- */
-function parseEnumValue(s: PropertyMetaSchema): string {
-  const raw = typeof s === "string" ? s : s.type;
-  return cleanEnumValue(raw);
-}
-
-function getSchemaType(schema: PropertyMetaSchema) {
-  return typeof schema === "string" ? schema : schema.type;
-}
-
-function normalizeEnumValues(values: PropertyMetaSchema[] | undefined, required: boolean) {
-  const normalizedValues = values?.map(parseEnumValue) ?? [];
-  return required ? normalizedValues : normalizedValues.filter((value) => value !== "undefined");
-}
-
-function stripUndefinedSchemaValues(values: PropertyMetaSchema[] | undefined) {
-  return (values ?? []).filter((value) => getSchemaType(value) !== "undefined");
-}
-
-function joinUniqueTypes(types: string[]) {
-  return [...new Set(types)].join(" | ");
-}
-
-function cleanDefault(propertyMeta: PropertyMeta) {
-  if (!propertyMeta.default) return propertyMeta.default;
-  if (typeof propertyMeta.schema === "string") return propertyMeta.default;
-  if (propertyMeta.schema.kind === "enum") return cleanEnumValue(propertyMeta.default);
-
-  return propertyMeta.default;
-}
-
 export class ComponentMetaResolver {
   private checker: ComponentMetaChecker;
   private tsconfig: string;
@@ -132,10 +82,10 @@ export class ComponentMetaResolver {
         name: i.name,
         description: i.description ?? "",
         required: i.required,
-        default: cleanDefault(i),
+        default: i.default,
         tags: i.tags ?? [],
         originalType: i.type,
-        resolved: this.resolveSchema(i.schema, i.required),
+        resolved: this.resolveSchema(i.schema),
         declarations: this.normalizeDeclarations(i.getDeclarations()),
       }));
   }
@@ -174,24 +124,24 @@ export class ComponentMetaResolver {
     }));
   }
 
-  resolveSchema(schema: PropertyMetaSchema, required = true, depth = 0): ResolvedSchema {
+  resolveSchema(schema: PropertyMetaSchema, depth = 0): ResolvedSchema {
     if (typeof schema === "string") {
       return { kind: "primitive", type: schema };
     }
 
     if (depth >= this.maxDepth) {
-      return this.resolveSchemaAtDepthLimit(schema, required);
+      return this.resolveSchemaAtDepthLimit(schema);
     }
 
     if (schema.kind === "enum") {
-      return this.resolvePrimitiveOrEnum(schema, required, depth);
+      return this.resolvePrimitiveOrEnum(schema, depth);
     }
 
     if (schema.kind === "object") {
       const rawFields = schema.schema ?? {};
       const fields: Record<string, ResolvedSchema> = {};
       for (const [key, fieldMeta] of Object.entries(rawFields)) {
-        fields[key] = this.resolveSchema(fieldMeta.schema, fieldMeta.required, depth + 1);
+        fields[key] = this.resolveSchema(fieldMeta.schema, depth + 1);
       }
 
       return {
@@ -206,12 +156,7 @@ export class ComponentMetaResolver {
       return {
         kind: "array",
         type: schema.type,
-        items: this.resolveArrayItemType(
-          schema.type,
-          members,
-          (member) => this.resolveSchema(member, true, depth + 1),
-          required,
-        ),
+        items: members.map((member) => this.resolveSchema(member, depth + 1)),
       };
     }
 
@@ -220,109 +165,36 @@ export class ComponentMetaResolver {
       type: schema.type,
       params: (schema.schema ?? []).map((s, i) => ({
         index: i,
-        resolved: this.resolveSchema(s, true, depth + 1),
+        resolved: this.resolveSchema(s, depth + 1),
       })),
     };
   }
 
   private resolvePrimitiveOrEnum(
     schema: Extract<PropertyMetaSchema, { kind: "enum" }>,
-    required: boolean,
     depth: number,
   ) {
     if (isPrimitiveType(schema.type)) {
       return { kind: "primitive", type: schema.type } as const;
     }
 
-    const normalizedMembers = required
-      ? (schema.schema ?? [])
-      : stripUndefinedSchemaValues(schema.schema);
-
-    if (normalizedMembers.length === 1) {
-      const [member] = normalizedMembers;
-      if (typeof member !== "string" && member.kind !== "enum") {
-        return this.resolveSchema(member, true, depth);
-      }
-    }
-
-    if (!required) {
-      const cleaned = stripUndefinedFromType(schema.type);
-      if (isPrimitiveType(cleaned)) {
-        return { kind: "primitive", type: cleaned } as const;
-      }
-    }
-
     return {
       kind: "enum",
       type: schema.type,
-      values: normalizeEnumValues(normalizedMembers, true),
-      resolved: {
-        kind: "primitive",
-        type:
-          stripUndefinedFromType(schema.type) ||
-          joinUniqueTypes(normalizedMembers.map(getSchemaType)),
-      },
+      values: schema.schema?.map((item) => this.resolveSchema(item, depth + 1)) ?? [],
     } as const;
   }
 
-  private resolveArrayItemType(
-    arrayType: string,
-    members: PropertyMetaSchema[],
-    resolveMember: (schema: PropertyMetaSchema) => ResolvedSchema,
-    required: boolean,
-  ) {
-    if (members.length === 0) {
-      return { kind: "primitive", type: "unknown" } as const;
-    }
-
-    if (members.length === 1) {
-      return resolveMember(members[0]);
-    }
-
-    const types = members.map(getSchemaType);
-    const values = normalizeEnumValues(members, required);
-    const inferredItemType = arrayType.endsWith("[]")
-      ? arrayType.slice(0, -2).trim()
-      : joinUniqueTypes(types);
-
-    if (types.every((type) => isPrimitiveType(type))) {
-      return {
-        kind: "primitive",
-        type: joinUniqueTypes(types),
-      } as const;
-    }
-
-    if (values.length === members.length) {
-      return {
-        kind: "enum",
-        type: inferredItemType,
-        values,
-        resolved: {
-          kind: "primitive",
-          type: inferredItemType,
-        },
-      } as const;
-    }
-
-    return {
-      kind: "primitive",
-      type: joinUniqueTypes(types),
-    } as const;
-  }
-
-  private resolveSchemaAtDepthLimit(
-    schema: Exclude<PropertyMetaSchema, string>,
-    required: boolean,
-  ): ResolvedSchema {
+  private resolveSchemaAtDepthLimit(schema: Exclude<PropertyMetaSchema, string>): ResolvedSchema {
     if (schema.kind === "enum") {
-      return this.resolvePrimitiveOrEnum(schema, required, this.maxDepth);
+      return this.resolvePrimitiveOrEnum(schema, this.maxDepth);
     }
 
     if (schema.kind === "object") {
       const fields = Object.fromEntries(
         Object.entries(schema.schema ?? {}).map(([key, fieldMeta]) => [
           key,
-          this.snapshotSchema(fieldMeta.schema, fieldMeta.required),
+          this.snapshotSchema(fieldMeta.schema),
         ]),
       );
 
@@ -338,7 +210,7 @@ export class ComponentMetaResolver {
       return {
         kind: "array",
         type: schema.type,
-        items: this.resolveArrayItemAtDepthLimit(schema.type, members, required),
+        items: members.map((member) => this.snapshotSchema(member)),
       };
     }
 
@@ -347,62 +219,18 @@ export class ComponentMetaResolver {
       type: schema.type,
       params: (schema.schema ?? []).map((item, index) => ({
         index,
-        resolved: this.snapshotSchema(item, true),
+        resolved: this.snapshotSchema(item),
       })),
     };
   }
 
-  private resolveArrayItemAtDepthLimit(
-    arrayType: string,
-    members: PropertyMetaSchema[],
-    required: boolean,
-  ): ResolvedSchema {
-    if (members.length === 0) {
-      return { kind: "primitive", type: "unknown" };
-    }
-
-    if (members.length === 1) {
-      return this.snapshotSchema(members[0], true);
-    }
-
-    const types = members.map(getSchemaType);
-    const values = normalizeEnumValues(members, required);
-    const inferredItemType = arrayType.endsWith("[]")
-      ? arrayType.slice(0, -2).trim()
-      : joinUniqueTypes(types);
-
-    if (types.every((type) => isPrimitiveType(type))) {
-      return {
-        kind: "primitive",
-        type: joinUniqueTypes(types),
-      };
-    }
-
-    if (values.length === members.length) {
-      return {
-        kind: "enum",
-        type: inferredItemType,
-        values,
-        resolved: {
-          kind: "primitive",
-          type: inferredItemType,
-        },
-      };
-    }
-
-    return {
-      kind: "primitive",
-      type: joinUniqueTypes(types),
-    };
-  }
-
-  private snapshotSchema(schema: PropertyMetaSchema, required: boolean): ResolvedSchema {
+  private snapshotSchema(schema: PropertyMetaSchema): ResolvedSchema {
     if (typeof schema === "string") {
       return { kind: "primitive", type: schema };
     }
 
     if (schema.kind === "enum") {
-      return this.resolvePrimitiveOrEnum(schema, required, this.maxDepth);
+      return this.resolvePrimitiveOrEnum(schema, this.maxDepth);
     }
 
     if (schema.kind === "object") {
@@ -417,7 +245,7 @@ export class ComponentMetaResolver {
       return {
         kind: "array",
         type: schema.type,
-        items: { kind: "primitive", type: "unknown" },
+        items: [],
       };
     }
 
